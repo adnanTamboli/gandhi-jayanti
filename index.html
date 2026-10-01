@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bapu · Gandhi Jayanti</title>
+<meta name="description" content="A scroll-driven tribute for Gandhi Jayanti: Bapu steps out of a note and walks to the sea, his words rising around him.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Tiro+Devanagari+Hindi&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#2b2a26; --paper:#f4ecd8; --saffron:#ff9933; --green:#138808; --khadi:#efe7d4; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { background:#1d1b2b; color:var(--paper); font-family:Inter, system-ui, sans-serif; }
+  body { height:1000vh; }
+  canvas#gl { position:fixed; inset:0; width:100%; height:100%; display:block; }
+
+  .overlay { position:fixed; left:0; right:0; pointer-events:none; text-align:center; transition:opacity .5s ease; z-index:2; padding:0 20px; }
+  #intro { top:12vh; }
+  #intro .hi { font-family:"Tiro Devanagari Hindi", serif; font-size:clamp(20px, 3.4vw, 30px); letter-spacing:.06em; color:#ffd9a8; text-shadow:0 2px 18px rgba(0,0,0,.45); }
+  #intro h1 { font-family:"Cormorant Garamond", serif; font-weight:600; font-size:clamp(44px, 8vw, 96px); line-height:1; margin:10px 0 12px; text-shadow:0 4px 30px rgba(0,0,0,.45); }
+  #intro p { font-family:"Cormorant Garamond", serif; font-style:italic; font-size:clamp(18px, 2.4vw, 24px); opacity:.9; text-shadow:0 2px 14px rgba(0,0,0,.5); }
+  #scrollhint { bottom:6vh; font-size:14px; letter-spacing:.2em; text-transform:uppercase; opacity:.85; }
+  #scrollhint i { display:block; width:1px; height:42px; margin:10px auto 0; background:linear-gradient(var(--paper), transparent); animation:drip 1.8s ease-in-out infinite; transform-origin:top; }
+  @keyframes drip { 0% { transform:scaleY(0); opacity:1 } 70% { transform:scaleY(1); opacity:1 } 100% { transform:scaleY(1); opacity:0 } }
+
+  #outro { top:5vh; opacity:0; }
+  #outro .hi { font-family:"Tiro Devanagari Hindi", serif; font-size:clamp(22px, 3.6vw, 34px); color:#fff3dc; }
+  #outro h2 { font-family:"Cormorant Garamond", serif; font-weight:600; font-size:clamp(34px, 5.6vw, 70px); line-height:1.02; margin:6px 0 8px; text-shadow:0 4px 30px rgba(60,20,0,.45); }
+  #outro p { font-family:"Cormorant Garamond", serif; font-style:italic; font-size:clamp(18px, 2.4vw, 26px); }
+  #outro small { display:block; margin-top:10px; font-size:13px; letter-spacing:.18em; text-transform:uppercase; opacity:.85; }
+  .tri { display:flex; justify-content:center; gap:6px; margin:14px auto 0; }
+  .tri span { width:46px; height:4px; border-radius:2px; }
+  #share { pointer-events:auto; margin-top:12px; border:1px solid rgba(255,255,255,.6); background:rgba(255,255,255,.12); color:#fff; font:500 14px Inter, sans-serif;
+    padding:10px 22px; border-radius:999px; cursor:pointer; backdrop-filter:blur(6px); letter-spacing:.04em; }
+  #share:hover { background:rgba(255,255,255,.22); }
+
+  /* progress: a khadi thread with a little charkha */
+  #thread { position:fixed; right:22px; top:50%; transform:translateY(-50%); height:46vh; width:2px; background:rgba(255,255,255,.18); z-index:3; border-radius:2px; }
+  #thread b { position:absolute; left:0; top:0; width:2px; background:#f4ecd8; border-radius:2px; height:0; }
+  #thread svg { position:absolute; left:-13px; width:28px; height:28px; transform:translateY(-50%); }
+  #sound { position:fixed; right:14px; bottom:14px; z-index:3; width:42px; height:42px; border-radius:50%; border:1px solid rgba(255,255,255,.45);
+    background:rgba(20,16,30,.35); color:#fff; font-size:18px; cursor:pointer; backdrop-filter:blur(6px); }
+  #credit { position:fixed; left:14px; bottom:12px; z-index:3; font-size:11px; opacity:.6; letter-spacing:.04em; }
+  #loader { position:fixed; inset:0; z-index:5; background:#1d1b2b; display:grid; place-items:center; font-family:"Cormorant Garamond", serif; font-style:italic; font-size:22px; transition:opacity .8s; }
+  #loader.done { opacity:0; pointer-events:none; }
+  @media (max-width: 640px) { #thread { right:12px; height:36vh; } #outro small { letter-spacing:.08em; font-size:11px; } }
+</style>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="loader">सत्य · अहिंसा</div>
+
+<div class="overlay" id="intro">
+  <div class="hi">२ अक्टूबर · गांधी जयंती</div>
+  <h1>Walk with Bapu</h1>
+  <p>Scroll, and he steps out of the portrait.</p>
+</div>
+<div class="overlay" id="scrollhint">Scroll<i></i></div>
+
+<div class="overlay" id="outro">
+  <div class="hi">गांधी जयंती की शुभकामनाएँ</div>
+  <h2>Happy Gandhi Jayanti</h2>
+  <p>“My life is my message.”</p>
+  <small>2 October 1869 · 157 years of Bapu</small>
+  <div class="tri"><span style="background:var(--saffron)"></span><span style="background:#fff"></span><span style="background:var(--green)"></span></div>
+  <button id="share">Share this tribute</button>
+</div>
+
+<div id="thread"><b></b>
+  <svg viewBox="0 0 40 40"><g fill="none" stroke="#f4ecd8" stroke-width="2.4"><circle cx="20" cy="20" r="15"/><circle cx="20" cy="20" r="3"/>
+    <g id="spokes"><line x1="20" y1="5" x2="20" y2="35"/><line x1="5" y1="20" x2="35" y2="20"/><line x1="9.4" y1="9.4" x2="30.6" y2="30.6"/><line x1="30.6" y1="9.4" x2="9.4" y2="30.6"/></g></g></svg>
+</div>
+<button id="sound" aria-label="Sound off" title="Sound">♪</button>
+<div id="credit">A tribute · the note is an illustration, not currency</div>
+
+<script type="module">
+import * as THREE from 'three';
+
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = t => t * t * (3 - 2 * t);
+const seg = (p, a, b) => clamp((p - a) / (b - a));          // 0→1 while p goes a→b
+const damp = (a, b, k, dt) => a + (b - a) * (1 - Math.exp(-k * dt));
+
+await Promise.all([
+  document.fonts.load('600 60px "Cormorant Garamond"'), document.fonts.load('italic 500 60px "Cormorant Garamond"'),
+  document.fonts.load('60px "Tiro Devanagari Hindi"'), document.fonts.load('500 20px Inter'),
+]).catch(() => {});
+
+/* hand-drawn Bapu: green-screen clips keyed into transparent sprite sheets (media/*.webp) */
+const loadSheet = (url) => new THREE.TextureLoader().loadAsync(url).then((t) => {
+  t.colorSpace = THREE.SRGBColorSpace; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; return t;
+});
+const [riseTex, walkTex, waveTex] = await Promise.all(['media/rise.webp', 'media/walk.webp', 'media/wave.webp'].map(loadSheet));
+
+/* ======================= renderer / scene ======================= */
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gl'), antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.localClippingEnabled = true;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xf2c9a0, 25, 140);
+const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.05, 900);
+
+const END = 60;                 // where the walk reaches the sea
+const STRIDE = 0.75;            // metres per step (matches the drawn walk)
+const CYCLE = 2 * STRIDE;       // one loop of the walk sprite = two steps
+
+/* ======================= sky: dawn → day → sunset ======================= */
+const SKY = {
+  top:    [new THREE.Color('#2c3566'), new THREE.Color('#77abd9'), new THREE.Color('#3b2c5e')],
+  bottom: [new THREE.Color('#f7b98c'), new THREE.Color('#f6e6c6'), new THREE.Color('#ff8f52')],
+};
+const skyMat = new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false, fog: false,
+  uniforms: { uTop: { value: new THREE.Color() }, uBottom: { value: new THREE.Color() }, uSun: { value: new THREE.Vector3(0, 0.2, -1) } },
+  vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }`,
+  fragmentShader: `uniform vec3 uTop, uBottom, uSun; varying vec3 vDir;
+    void main(){
+      float h = clamp(vDir.y * 1.6 + .15, 0., 1.);
+      vec3 c = mix(uBottom, uTop, pow(h, .8));
+      float g = max(dot(normalize(vDir), normalize(uSun)), 0.);
+      c += vec3(1., .78, .5) * pow(g, 18.) * .55 + vec3(1., .85, .6) * pow(g, 3.) * .12;
+      gl_FragColor = vec4(c, 1.);
+    }`,
+});
+const sky = new THREE.Mesh(new THREE.SphereGeometry(600, 32, 16), skyMat);
+scene.add(sky);
+function skyAt(phase, out = {}) {      // phase 0 dawn · .5 day · 1 sunset
+  const i = phase < .5 ? 0 : 1, t = phase < .5 ? phase / .5 : (phase - .5) / .5;
+  out.top = SKY.top[i].clone().lerp(SKY.top[i + 1], smooth(t));
+  out.bottom = SKY.bottom[i].clone().lerp(SKY.bottom[i + 1], smooth(t));
+  return out;
+}
+
+/* ======================= lights ======================= */
+const hemi = new THREE.HemisphereLight(0xfff1dc, 0x6b4a32, 1.1);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffe2b8, 2.4);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -8, right: 8, top: 8, bottom: -8, near: 1, far: 40 });
+sun.shadow.bias = -0.0004;
+scene.add(sun, sun.target);
+
+/* ======================= canvas helpers ======================= */
+const canvasTex = (w, h, draw) => {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+};
+function wrap(ctx, text, maxW) {
+  const words = text.split(' '), lines = []; let line = '';
+  for (const w of words) { const test = line ? line + ' ' + w : w; if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; } else line = test; }
+  if (line) lines.push(line); return lines;
+}
+function charkha(ctx, cx, cy, r, color, lw) {
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, r * .16, 0, Math.PI * 2); ctx.stroke();
+  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * r * .16, cy + Math.sin(a) * r * .16); ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); ctx.stroke(); }
+  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + Math.PI / 8; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * r * .98, cy + Math.sin(a) * r * .98, lw * .9, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill(); }
+  ctx.restore();
+}
+
+/* ======================= the note (an illustration — no denomination, no currency marks) ======================= */
+const INK = '#30483a';
+function guilloche(ctx, cx, cy, R, r, d, color, lw, turns = 1) {
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.globalAlpha = .55; ctx.beginPath();
+  for (let i = 0; i <= 2400; i++) {
+    const t = i / 2400 * Math.PI * 2 * turns;
+    const x = cx + (R - r) * Math.cos(t) + d * Math.cos(((R - r) / r) * t);
+    const y = cy + (R - r) * Math.sin(t) - d * Math.sin(((R - r) / r) * t);
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  }
+  ctx.stroke(); ctx.restore();
+}
+const NOTE_W = 2.8, NOTE_H = 1.36;
+const PORTRAIT = { x: .69, y: .5, w: .25, h: .62 };      // oval window on the note, in UV
+const noteTex = canvasTex(2048, 1000, (g, W, H) => {
+  const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, '#efe5c8'); bg.addColorStop(.5, '#e7dfc0'); bg.addColorStop(1, '#dfd6b2');
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 9000; i++) { g.fillStyle = `rgba(80,70,40,${Math.random() * .05})`; g.fillRect(Math.random() * W, Math.random() * H, 2, 2); }
+  for (let y = 40; y < H; y += 9) { g.strokeStyle = 'rgba(48,72,58,.05)'; g.beginPath(); for (let x = 0; x <= W; x += 16) g.lineTo(x, y + Math.sin(x / 60 + y / 30) * 4); g.stroke(); }
+  guilloche(g, 360, 500, 300, 37, 120, '#5e7a55', 1.6, 37);
+  guilloche(g, 360, 500, 200, 23, 70, '#a8794a', 1.2, 23);
+  guilloche(g, 1700, 220, 150, 29, 50, '#5e7a55', 1, 29);
+  // borders
+  g.strokeStyle = INK; g.lineWidth = 6; g.strokeRect(34, 34, W - 68, H - 68);
+  g.lineWidth = 2; g.strokeRect(52, 52, W - 104, H - 104);
+  g.setLineDash([2, 10]); g.strokeRect(68, 68, W - 136, H - 136); g.setLineDash([]);
+  // portrait window
+  const px = PORTRAIT.x * W, py = PORTRAIT.y * H, rx = PORTRAIT.w * W / 2, ry = PORTRAIT.h * H / 2;
+  const og = g.createRadialGradient(px, py, 10, px, py, ry); og.addColorStop(0, '#f6efd9'); og.addColorStop(1, '#e6dcbc');
+  g.fillStyle = og; g.beginPath(); g.ellipse(px, py, rx, ry, 0, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = INK; g.lineWidth = 4; g.beginPath(); g.ellipse(px, py, rx + 10, ry + 10, 0, 0, Math.PI * 2); g.stroke();
+  g.lineWidth = 1.5; g.beginPath(); g.ellipse(px, py, rx + 20, ry + 20, 0, 0, Math.PI * 2); g.stroke();
+  // words
+  g.fillStyle = INK; g.textAlign = 'center';
+  g.font = '150px "Tiro Devanagari Hindi"'; g.fillText('सत्य', 360, 560);
+  g.font = '600 46px "Cormorant Garamond"'; g.fillText('TRUTH  ·  NON-VIOLENCE', 360, 680);
+  g.font = '64px "Tiro Devanagari Hindi"'; g.fillText('अहिंसा', 360, 760);
+  g.textAlign = 'left';
+  g.font = '600 64px "Cormorant Garamond"'; g.fillText('Mohandas Karamchand Gandhi', 690, 170);
+  g.font = 'italic 500 40px "Cormorant Garamond"'; g.fillText('2 October 1869  —  Porbandar', 700, 230);
+  g.font = 'italic 500 34px "Cormorant Garamond"'; g.fillStyle = '#6b5a3c'; g.fillText('“My life is my message.”', 700, 820);
+  g.font = '500 20px Inter'; g.fillStyle = 'rgba(48,72,58,.75)'; g.fillText('A TRIBUTE  ·  NOT LEGAL TENDER', 700, 900);
+  charkha(g, 1880, 840, 62, INK, 4);
+});
+// the portrait sits on its own layer so it can fade as he steps out
+const portraitTex = canvasTex(512, 620, (g, W, H) => {
+  g.translate(W / 2, H / 2 + 20); g.strokeStyle = INK; g.fillStyle = INK; g.lineCap = 'round'; g.lineJoin = 'round';
+  // engraving-style shading lines on the head
+  g.save(); g.beginPath(); g.ellipse(0, -60, 118, 140, 0, 0, Math.PI * 2); g.clip();
+  for (let i = -150; i < 150; i += 7) { g.globalAlpha = .18 + (i > 30 ? .12 : 0); g.lineWidth = 2; g.beginPath(); g.moveTo(-140, i - 60); g.quadraticCurveTo(0, i - 70 + Math.abs(i) * .1, 140, i - 60); g.stroke(); }
+  g.restore(); g.globalAlpha = 1;
+  g.lineWidth = 6;
+  g.beginPath(); g.ellipse(0, -60, 118, 140, 0, Math.PI * 1.05, Math.PI * 1.95); g.stroke();            // crown
+  g.beginPath(); g.moveTo(-118, -60); g.bezierCurveTo(-120, 40, -70, 95, 0, 100); g.bezierCurveTo(70, 95, 120, 40, 118, -60); g.stroke(); // jaw
+  g.beginPath(); g.ellipse(-132, -40, 26, 44, -.2, Math.PI * .4, Math.PI * 1.6); g.stroke();            // ears
+  g.beginPath(); g.ellipse(132, -40, 26, 44, .2, -Math.PI * .6, Math.PI * .6); g.stroke();
+  g.lineWidth = 5;
+  g.beginPath(); g.arc(-48, -40, 36, 0, Math.PI * 2); g.stroke();                                        // spectacles
+  g.beginPath(); g.arc(48, -40, 36, 0, Math.PI * 2); g.stroke();
+  g.beginPath(); g.moveTo(-12, -44); g.quadraticCurveTo(0, -52, 12, -44); g.stroke();
+  g.beginPath(); g.moveTo(-84, -44); g.lineTo(-118, -54); g.moveTo(84, -44); g.lineTo(118, -54); g.stroke();
+  g.beginPath(); g.arc(-48, -38, 7, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(48, -38, 7, 0, Math.PI * 2); g.fill(); // eyes
+  g.lineWidth = 4;
+  g.beginPath(); g.moveTo(-6, -24); g.quadraticCurveTo(-14, 14, 0, 22); g.quadraticCurveTo(10, 24, 14, 16); g.stroke();      // nose
+  g.lineWidth = 8; g.beginPath(); g.moveTo(-34, 40); g.quadraticCurveTo(0, 30, 34, 40); g.stroke();                         // moustache
+  g.lineWidth = 4; g.beginPath(); g.moveTo(-30, 58); g.quadraticCurveTo(0, 78, 30, 58); g.stroke();                         // smile
+  g.beginPath(); g.moveTo(-90, -20); g.quadraticCurveTo(-96, 30, -70, 60); g.moveTo(90, -20); g.quadraticCurveTo(96, 30, 70, 60); g.stroke(); // cheek lines
+  // shoulders + shawl folds
+  g.lineWidth = 6; g.beginPath(); g.moveTo(-40, 104); g.lineTo(-40, 140); g.moveTo(40, 104); g.lineTo(40, 140); g.stroke();
+  g.beginPath(); g.moveTo(-210, 300); g.bezierCurveTo(-190, 170, -120, 140, -40, 140); g.lineTo(40, 140); g.bezierCurveTo(120, 140, 190, 170, 210, 300); g.stroke();
+  g.lineWidth = 3; g.globalAlpha = .6;
+  for (let i = 0; i < 6; i++) { g.beginPath(); g.moveTo(-150 + i * 26, 300); g.quadraticCurveTo(-120 + i * 30, 210, -30 + i * 20, 150); g.stroke(); }
+});
+
+const note = new THREE.Group(); scene.add(note);
+const noteMesh = new THREE.Mesh(new THREE.PlaneGeometry(NOTE_W, NOTE_H), new THREE.MeshStandardMaterial({ map: noteTex, roughness: .92, transparent: true, opacity: 0 }));
+noteMesh.rotation.x = -Math.PI / 2; noteMesh.position.y = 0.012; noteMesh.receiveShadow = true; note.add(noteMesh);
+const portraitMat = new THREE.MeshStandardMaterial({ map: portraitTex, transparent: true, roughness: .9, depthWrite: false });
+const portrait = new THREE.Mesh(new THREE.PlaneGeometry(NOTE_W * PORTRAIT.w, NOTE_H * PORTRAIT.h), portraitMat);
+portrait.visible = false; portrait.rotation.x = -Math.PI / 2; portrait.position.set((PORTRAIT.x - .5) * NOTE_W, 0.014, (PORTRAIT.y - .5) * NOTE_H); note.add(portrait);
+const PORTAL = portrait.position.clone();      // he rises out of the portrait window
+note.position.set(-PORTAL.x, 0, -PORTAL.z);       // put the window at the world origin
+
+const ringMat = new THREE.MeshBasicMaterial({ color: 0xffa53a, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+const ring = new THREE.Mesh(new THREE.RingGeometry(.28, .42, 64), ringMat);
+ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03; ring.visible = false; scene.add(ring);
+
+/* ======================= ground, khadi path, footprints, hills, sea ======================= */
+const groundTex = canvasTex(512, 512, (g, W, H) => {
+  g.fillStyle = '#b98b5c'; g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 6000; i++) { const v = Math.random(); g.fillStyle = `rgba(${v > .5 ? '255,235,200' : '70,40,20'},${Math.random() * .12})`; g.fillRect(Math.random() * W, Math.random() * H, 2 + Math.random() * 3, 2); }
+});
+groundTex.wrapS = groundTex.wrapT = THREE.RepeatWrapping; groundTex.repeat.set(40, 14);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(320, 110), new THREE.MeshStandardMaterial({ map: groundTex, roughness: 1 }));
+ground.rotation.x = -Math.PI / 2; ground.position.set(40, 0, -10); ground.receiveShadow = true; scene.add(ground);
+
+const khadiTex = canvasTex(256, 256, (g, W, H) => {
+  g.fillStyle = '#eee4cc'; g.fillRect(0, 0, W, H);
+  g.globalCompositeOperation = 'source-over';
+  for (let i = 0; i < W; i += 4) { g.fillStyle = `rgba(120,100,70,${.05 + Math.random() * .07})`; g.fillRect(i, 0, 2, H); g.fillRect(0, i, W, 2); }
+  for (let i = 0; i < 400; i++) { g.fillStyle = 'rgba(110,90,60,.15)'; g.fillRect(Math.random() * W, Math.random() * H, 1 + Math.random() * 4, 1); }
+});
+khadiTex.wrapS = khadiTex.wrapT = THREE.RepeatWrapping; khadiTex.repeat.set(44, 1);
+const pathEdge = canvasTex(4, 256, (g, W, H) => { const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#000'); gr.addColorStop(.18, '#fff'); gr.addColorStop(.82, '#fff'); gr.addColorStop(1, '#000'); g.fillStyle = gr; g.fillRect(0, 0, W, H); });
+pathEdge.colorSpace = THREE.NoColorSpace;
+const path = new THREE.Mesh(new THREE.PlaneGeometry(END + 4, 1.2), new THREE.MeshStandardMaterial({ map: khadiTex, alphaMap: pathEdge, transparent: true, roughness: .95, depthWrite: false }));
+path.rotation.x = -Math.PI / 2; path.position.set(.7 + (END + 4) / 2, 0.006, 0); path.receiveShadow = true; scene.add(path);
+
+const prints = [];
+const printGeo = new THREE.CircleGeometry(.07, 16); printGeo.scale(1.6, 1, 1); printGeo.rotateX(-Math.PI / 2);
+const printMat = new THREE.MeshBasicMaterial({ color: 0x6b5236, transparent: true, opacity: .35, depthWrite: false });
+const STEPS = Math.floor(END / STRIDE);
+const printMesh = new THREE.InstancedMesh(printGeo, printMat, STEPS);
+{ const m = new THREE.Matrix4(); for (let k = 0; k < STEPS; k++) { m.makeTranslation(1.2 + k * STRIDE, 0.008, k % 2 ? .1 : -.1); printMesh.setMatrixAt(k, m); } }
+printMesh.count = 0; scene.add(printMesh);
+
+function hills(z, color, h, seed) {
+  let s = seed; const r = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+  const shape = new THREE.Shape(); shape.moveTo(-80, -5);
+  for (let x = -80; x <= 180; x += 6) shape.lineTo(x, h * (.45 + r() * .55) + Math.sin(x * .05 + seed) * h * .3);
+  shape.lineTo(180, -5); shape.closePath();
+  const m = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color, transparent: true }));
+  m.position.z = z; scene.add(m); return m;
+}
+const hillLayers = [hills(-34, 0x9a6e58, 7, 3), hills(-52, 0x8a6a70, 11, 7), hills(-80, 0x7a6a86, 16, 11)];
+
+const seaGeo = new THREE.PlaneGeometry(120, 120, 120, 120); seaGeo.rotateX(-Math.PI / 2);
+const sea = new THREE.Mesh(seaGeo, new THREE.MeshStandardMaterial({ color: 0x3f7fa6, roughness: .25, metalness: .1, transparent: true, opacity: .96 }));
+sea.position.set(END + 4 + 60, 0.16, -10);   // above the ground even in wave troughs
+scene.add(sea);
+const seaBase = seaGeo.attributes.position.array.slice();
+const sand = new THREE.Mesh(new THREE.PlaneGeometry(14, 110), new THREE.MeshStandardMaterial({ color: 0xe6cfa3, roughness: 1 }));
+sand.rotation.x = -Math.PI / 2; sand.position.set(END + 2, 0.004, -10); sand.receiveShadow = true; scene.add(sand);
+
+/* the sun is a charkha wheel */
+const charkhaTex = canvasTex(512, 512, (g, W, H) => {
+  const gl = g.createRadialGradient(W / 2, H / 2, 40, W / 2, H / 2, W / 2); gl.addColorStop(0, 'rgba(255,240,200,.95)'); gl.addColorStop(.42, 'rgba(255,215,150,.55)'); gl.addColorStop(1, 'rgba(255,200,120,0)');
+  g.fillStyle = gl; g.fillRect(0, 0, W, H); charkha(g, W / 2, H / 2, 120, 'rgba(255,255,245,.95)', 7);
+});
+const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: charkhaTex, transparent: true, depthWrite: false, fog: false }));
+sunSprite.scale.set(22, 22, 1); scene.add(sunSprite);
+
+/* floating dust motes */
+const DUST = REDUCED ? 0 : 400;
+const dustGeo = new THREE.BufferGeometry();
+const dustPos = new Float32Array(DUST * 3), dustSeed = [];
+for (let i = 0; i < DUST; i++) { dustSeed.push([Math.random() * 90 - 15, Math.random() * 6 + .2, Math.random() * 14 - 10, Math.random() * 10]); }
+dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+const dotTex = canvasTex(64, 64, (g) => { const r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,240,210,1)'); r.addColorStop(1, 'rgba(255,240,210,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); });
+const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({ map: dotTex, size: .07, transparent: true, opacity: .75, depthWrite: false, blending: THREE.AdditiveBlending }));
+scene.add(dust);
+
+/* golden sparks out of the portrait while he rises */
+const SPARK = 260;
+const sparkGeo = new THREE.BufferGeometry(), sparkPos = new Float32Array(SPARK * 3), sparkSeed = [];
+for (let i = 0; i < SPARK; i++) sparkSeed.push([Math.random() * Math.PI * 2, .1 + Math.random() * .35, Math.random(), .6 + Math.random()]);
+sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
+const sparks = new THREE.Points(sparkGeo, new THREE.PointsMaterial({ map: dotTex, size: .06, color: 0xffcf7a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+scene.add(sparks);
+
+/* saffron · white · green finale */
+const TRI = 700;
+const triGeo = new THREE.BufferGeometry(), triPos = new Float32Array(TRI * 3), triCol = new Float32Array(TRI * 3), triSeed = [];
+const TRIC = [new THREE.Color('#ff9933'), new THREE.Color('#ffffff'), new THREE.Color('#138808')];
+for (let i = 0; i < TRI; i++) { const band = i % 3; triSeed.push([band, Math.random() * Math.PI * 2, Math.random(), .4 + Math.random() * .8]); TRIC[band].toArray(triCol, i * 3); }
+triGeo.setAttribute('position', new THREE.BufferAttribute(triPos, 3)); triGeo.setAttribute('color', new THREE.BufferAttribute(triCol, 3));
+const tri = new THREE.Points(triGeo, new THREE.PointsMaterial({ map: dotTex, size: .07, vertexColors: true, transparent: true, opacity: 0, depthWrite: false }));
+scene.add(tri);
+
+/* ======================= Bapu: hand-drawn sprite cards ======================= */
+// Each card is a plane showing one cell of a sprite sheet; scroll picks the cell.
+// w/h are metres (scaled so he is ~1.65 m tall), `bottom` is where the card's lower edge sits.
+function spriteCard(tex, cols, rows, frames, w, h, bottom) {
+  tex.repeat.set(1 / cols, 1 / rows);
+  const geo = new THREE.PlaneGeometry(w, h); geo.translate(0, h / 2 + bottom, 0);
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false, fog: false, side: THREE.DoubleSide, opacity: 0 });
+  const m = new THREE.Mesh(geo, mat); m.renderOrder = 5; scene.add(m);
+  m.userData.setFrame = (i) => {
+    i = ((Math.round(i) % frames) + frames) % frames;
+    tex.offset.set((i % cols) / cols, 1 - (Math.floor(i / cols) + 1) / rows);
+  };
+  m.userData.setFrame(0);
+  return m;
+}
+const riseCard = spriteCard(riseTex, 6, 6, 36, 2.03, 2.03, -0.16);   // portrait on paper → glow → he rises and stands
+const walkCard = spriteCard(walkTex, 7, 5, 35, 1.2, 1.767, -0.05);   // seamless two-step walk loop
+const waveCard = spriteCard(waveTex, 8, 4, 32, 1.108, 1.614, 0.06);  // from behind, turns round, waves (framed from the shins up)
+const shadowTex = canvasTex(128, 64, (g) => { const r = g.createRadialGradient(64, 32, 0, 64, 32, 64); r.addColorStop(0, 'rgba(60,30,10,.55)'); r.addColorStop(1, 'rgba(60,30,10,0)'); g.setTransform(1, 0, 0, .5, 0, 16); g.fillStyle = r; g.fillRect(0, 0, 128, 128); });
+const blob = new THREE.Mesh(new THREE.PlaneGeometry(1.0, .4), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, opacity: 0 }));
+blob.rotation.x = -Math.PI / 2; blob.position.y = .012; scene.add(blob);
+const faceCamera = (m) => { m.rotation.y = Math.atan2(camera.position.x - m.position.x, camera.position.z - m.position.z); };
+const tint = new THREE.Color();
+
+/* ======================= thoughts: paper slips that pop up behind him ======================= */
+const QUOTES = [
+  { at: -99, x: 0,  q: 'My life is my message.', src: '1947' },
+  { at: 4,   x: 9,  q: 'Strength does not come from physical capacity. It comes from an indomitable will.', src: 'Young India, 1920' },
+  { at: 13,  x: 18, q: 'The weak can never forgive. Forgiveness is the attribute of the strong.', src: 'Young India, 1931' },
+  { at: 22,  x: 27, q: 'Hate the sin and not the sinner.', src: 'An Autobiography, 1927' },
+  { at: 31,  x: 36, q: 'Truth is God.', src: 'Young India, 1931', hi: 'सत्य ही ईश्वर है' },
+  { at: 40,  x: 45, q: "Earth provides enough to satisfy every man's needs, but not every man's greed.", src: 'as recorded by Pyarelal' },
+  { at: 49,  x: 54, q: 'Non-violence is the greatest force at the disposal of mankind.', src: 'Harijan, 1946', hi: 'अहिंसा' },
+];
+const cards = QUOTES.map((Q, i) => {
+  const tex = canvasTex(1100, 560, (g, W, H) => {
+    g.save(); g.shadowColor = 'rgba(60,30,0,.25)'; g.shadowBlur = 30; g.shadowOffsetY = 10;
+    g.fillStyle = '#f6eedb'; g.beginPath(); g.roundRect(30, 30, W - 60, H - 60, 18); g.fill(); g.restore();
+    g.strokeStyle = 'rgba(48,72,58,.35)'; g.lineWidth = 2; g.beginPath(); g.roundRect(48, 48, W - 96, H - 96, 10); g.stroke();
+    g.fillStyle = 'rgba(255,153,51,.85)'; g.fillRect(80, 92, 70, 5); g.fillStyle = 'rgba(19,136,8,.8)'; g.fillRect(160, 92, 70, 5);
+    g.fillStyle = '#2b2a26'; g.textAlign = 'left';
+    const size = Q.q.length > 60 ? 50 : Q.q.length > 30 ? 60 : 78;
+    g.font = `italic 600 ${size}px "Cormorant Garamond"`;
+    const lines = wrap(g, `“${Q.q}”`, W - 190);
+    let y = 150 + size * .8 + (Q.hi ? 0 : 20);
+    if (Q.hi) { g.font = '44px "Tiro Devanagari Hindi"'; g.fillStyle = '#8a5a2a'; g.fillText(Q.hi, 82, 172); y += 44; g.font = `italic 600 ${size}px "Cormorant Garamond"`; g.fillStyle = '#2b2a26'; }
+    for (const l of lines) { g.fillText(l, 82, y); y += size * 1.12; }
+    g.font = '500 24px Inter'; g.fillStyle = 'rgba(48,72,58,.8)'; g.fillText(`— M. K. GANDHI  ·  ${Q.src.toUpperCase()}`, 82, H - 82);
+    charkha(g, W - 120, H - 92, 26, 'rgba(48,72,58,.6)', 3);
+  });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(3.3, 1.68), new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false, fog: false, depthWrite: false }));
+  m.position.set(Q.x, i ? 2.25 + (i % 2) * .35 : 2.35, i ? -5.2 - (i % 3) * .9 : -1.6);
+  m.scale.setScalar(.001); m.userData = { s: 0, seed: Math.random() * 6 };
+  scene.add(m); return m;
+});
+
+/* ======================= scroll → story ======================= */
+const introEl = document.getElementById('intro'), hintEl = document.getElementById('scrollhint'), outroEl = document.getElementById('outro');
+const threadFill = document.querySelector('#thread b'), threadWheel = document.querySelector('#thread svg'), spokes = document.getElementById('spokes');
+let target = 0, prog = 0;
+const readScroll = () => { const max = document.documentElement.scrollHeight - innerHeight; target = max > 0 ? clamp(scrollY / max) : 0; };
+addEventListener('scroll', readScroll, { passive: true }); readScroll();
+
+const wide = () => camera.aspect >= 0.9;
+const tmpA = new THREE.Vector3(), tmpB = new THREE.Vector3(), look = new THREE.Vector3(), camDir = new THREE.Vector3();
+function cameraFor(p, fx) {
+  let k = wide() ? 1 : 1.55;          // pull back on portrait screens
+  const keys = [
+    [0.00, [0, 1.15, 3.6], [0, 1.1, 0]],
+    [0.06, [0, 1.15, 3.5], [0, 1.05, 0]],
+    [0.27, [0.4, 1.25, 3.4], [0, 1.0, 0]],
+    [0.36, [-1.2, 1.6, 5.0], [1.2, 1.0, 0]],
+  ];
+  if (p < 0.36) {
+    let i = 0; while (i < keys.length - 2 && p > keys[i + 1][0]) i++;
+    const [a, pa, la] = keys[i], [b, pb, lb] = keys[i + 1], t = smooth(seg(p, a, b));
+    tmpA.set(...pa).lerp(tmpB.set(...pb), t); look.set(...la).lerp(tmpB.set(...lb), t);
+  } else if (p < 0.86) {
+    tmpA.set(fx - 1.2, 1.6, 5.0); look.set(fx + 1.2, 1.0, 0);
+  } else {
+    // close behind him, looking out to sea: he turns round and waves at us with the charkha sun behind him
+    const t = smooth(seg(p, .86, .93));
+    tmpA.set(lerp(END - 1.2, END - 2.9, t), lerp(1.6, 1.55, t), lerp(5.0, .45, t));
+    look.set(lerp(END + 1.2, END + 2.2, t), lerp(1.0, 1.72, t), 0);
+    k = lerp(k, wide() ? 1 : .92, t);
+  }
+  tmpA.sub(look).multiplyScalar(k).add(look);
+  camera.position.copy(tmpA); camera.lookAt(look);
+}
+
+/* ======================= gentle drone (off until asked) ======================= */
+let actx = null, droneGain = null;
+const soundBtn = document.getElementById('sound');
+soundBtn.addEventListener('click', () => {
+  if (!actx) {
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    droneGain = actx.createGain(); droneGain.gain.value = 0; droneGain.connect(actx.destination);
+    const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1200; lp.connect(droneGain);
+    [[130.81, .5], [196.0, .32], [261.63, .22], [130.81 * 1.003, .3]].forEach(([f, g]) => {   // Sa–Pa–Sa', tanpura-like
+      const o = actx.createOscillator(), gg = actx.createGain(); o.type = 'sawtooth'; o.frequency.value = f; gg.gain.value = g * .08;
+      const lfo = actx.createOscillator(), lg = actx.createGain(); lfo.frequency.value = .1 + Math.random() * .2; lg.gain.value = g * .04; lfo.connect(lg).connect(gg.gain);
+      o.connect(gg).connect(lp); o.start(); lfo.start();
+    });
+  }
+  const on = droneGain.gain.value < .5;
+  droneGain.gain.setTargetAtTime(on ? 1 : 0, actx.currentTime, .6);
+  soundBtn.setAttribute('aria-label', on ? 'Sound on' : 'Sound off'); soundBtn.style.background = on ? 'rgba(255,153,51,.45)' : '';
+});
+document.getElementById('share').addEventListener('click', async () => {
+  const data = { title: 'Happy Gandhi Jayanti', text: 'Walk with Bapu — a scroll tribute for Gandhi Jayanti', url: location.href };
+  try { if (navigator.share) await navigator.share(data); else { await navigator.clipboard.writeText(location.href); document.getElementById('share').textContent = 'Link copied ✓'; } } catch (_) {}
+});
+
+/* ======================= loop ======================= */
+const clock = new THREE.Clock();
+const skyC = {};
+function frame() {
+  const dt = Math.min(clock.getDelta(), .05), t = clock.elapsedTime;
+  prog = REDUCED ? target : damp(prog, target, 4, dt);
+  const p = prog;
+
+  // story beats: rise (scrubbed) → crossfade to the walk loop → crossfade to the wave (scrubbed)
+  const fx = p < .38 ? 0 : p < .86 ? lerp(0, END, seg(p, .38, .86)) : END;
+  const riseOp = 1 - smooth(seg(p, .29, .33));
+  const walkOp = smooth(seg(p, .29, .33)) * (1 - smooth(seg(p, .86, .885)));
+  const waveOp = smooth(seg(p, .86, .885));
+  riseCard.userData.setFrame(seg(p, .05, .27) * 35);
+  walkCard.userData.setFrame((fx / CYCLE) * 35);
+  waveCard.userData.setFrame(seg(p, .875, .965) * 31);
+  riseCard.material.opacity = riseOp; walkCard.material.opacity = walkOp; waveCard.material.opacity = waveOp;
+  riseCard.visible = riseOp > .001; walkCard.visible = walkOp > .001; waveCard.visible = waveOp > .001;
+  walkCard.position.x = fx; waveCard.position.x = END;
+  [riseCard, walkCard, waveCard].forEach(faceCamera);
+  blob.position.x = fx; blob.material.opacity = Math.max(walkOp, waveOp * .6) * .8;
+  noteMesh.material.opacity = smooth(seg(p, .29, .34));
+
+  // golden sparks while he rises, and a burst as he turns to walk
+  const glow = Math.sin(Math.PI * seg(p, .1, .3)) * .6 + Math.sin(Math.PI * seg(p, .28, .36)) * .8;
+  sparks.material.opacity = glow;
+  for (let i = 0; i < SPARK; i++) {
+    const [a, r, ph, sp] = sparkSeed[i], k = (t * .35 * sp + ph) % 1;
+    sparkPos.set([Math.cos(a + k * 2) * r * (1 + k) * 1.6, k * 2.2 + .02, Math.sin(a + k * 2) * r * (1 + k)], i * 3);
+  }
+  sparkGeo.attributes.position.needsUpdate = true;
+
+  // footprints behind him
+  printMesh.count = clamp(Math.floor((fx - 1.2) / STRIDE) + 1, 0, STEPS);
+
+  // time of day + light
+  const phase = clamp(p * 1.15 - .05);
+  skyAt(phase, skyC);
+  skyMat.uniforms.uTop.value.copy(skyC.top); skyMat.uniforms.uBottom.value.copy(skyC.bottom);
+  scene.fog.color.copy(skyC.bottom);
+  renderer.setClearColor(skyC.bottom);
+  const sunAlt = Math.sin(Math.PI * (.12 + phase * .76));
+  const endT = smooth(seg(p, .86, .93));
+  const sunWorld = tmpB.set(lerp(fx + 26 + phase * 10, END + 45, endT), lerp(3 + sunAlt * 16, 8.5, endT), lerp(-70, -9, endT));
+  sunSprite.position.copy(sunWorld); sunSprite.material.rotation = -p * 26;
+  skyMat.uniforms.uSun.value.copy(sunWorld).sub(camera.position).normalize();
+  sun.position.set(fx + 6 - phase * 12, 4 + sunAlt * 8, 6); sun.target.position.set(fx, 0, 0);
+  sun.color.setHSL(.08, .8, .62 + sunAlt * .18); sun.intensity = 1.6 + sunAlt * 1.4;
+  hemi.color.copy(skyC.top).lerp(new THREE.Color(0xfff1dc), .6);
+  tint.set(0xffffff).lerp(skyC.bottom, .22 + Math.abs(phase - .5) * .3);
+  [riseCard, walkCard, waveCard].forEach((m) => m.material.color.copy(tint));
+  hillLayers.forEach((h, i) => { h.material.color.copy(skyC.bottom).lerp(new THREE.Color([0x7a5040, 0x6e5468, 0x5e5a7e][i]), .55 - i * .12); h.material.opacity = 1 - endT; h.visible = endT < .999; });   // seen side-on from the shore, so they bow out
+
+  // sea swell
+  const arr = seaGeo.attributes.position.array;
+  for (let i = 0; i < arr.length; i += 3) arr[i + 1] = Math.sin(seaBase[i] * .35 + t * 1.2) * .06 + Math.cos(seaBase[i + 2] * .4 + t * .9) * .05;
+  seaGeo.attributes.position.needsUpdate = true;
+
+  // dust motes drift
+  for (let i = 0; i < DUST; i++) { const [x, y, z, s] = dustSeed[i]; dustPos.set([x + Math.sin(t * .2 + s) * .4, y + Math.sin(t * .5 + s) * .15, z], i * 3); }
+  dustGeo.attributes.position.needsUpdate = true;
+
+  // quote slips pop in when he approaches and drift away after he passes
+  cards.forEach((m, i) => {
+    const Q = QUOTES[i];
+    const narrow = !wide();
+    const on = i === 0 ? (p > .22 && p < .37) : (fx > Q.at && fx < Q.at + (narrow ? 8 : 11) && p < .86);
+    m.userData.s = damp(m.userData.s, on ? 1 : 0, on ? 7 : 5, dt);
+    const s = m.userData.s, pop = s < .999 ? s + Math.sin(s * Math.PI) * .18 : 1;
+    m.scale.setScalar(Math.max(.001, pop) * (narrow ? .8 : 1));
+    m.material.opacity = clamp(s * 1.4);
+    // wide screens: slips stay put and drift past (parallax). Phones see only a slice of the path, so the slip rides above him.
+    let baseY = narrow ? 2.6 : (i ? 2.25 + (i % 2) * .35 : 2.35);
+    if (narrow && i) {               // 7 m down the camera's line of sight, lifted into the sky above him
+      camera.getWorldDirection(camDir);
+      m.position.x = camera.position.x + camDir.x * 7; m.position.z = camera.position.z + camDir.z * 7;
+      baseY = camera.position.y + camDir.y * 7 + 2.1;
+    } else if (i) { m.position.x = Q.x; m.position.z = -5.2 - (i % 3) * .9; }
+    m.position.y += ((baseY + Math.sin(t * .9 + m.userData.seed) * .06 + (1 - s) * -.6) - m.position.y) * .2;
+    m.rotation.y = Math.atan2(camera.position.x - m.position.x, camera.position.z - m.position.z) * .6;
+    m.rotation.z = Math.sin(t * .7 + m.userData.seed) * .02;
+  });
+
+  // tricolour rises around him at the sea
+  const fin = smooth(seg(p, .9, 1));
+  tri.material.opacity = fin;
+  for (let i = 0; i < TRI; i++) {
+    const [band, a, ph, sp] = triSeed[i], k = (t * .12 * sp + ph) % 1;
+    const r = .9 + k * 2.6, ang = a + k * 3 + band * 2.09;          // a ring around and behind him, never between him and the camera
+    triPos.set([END + 1.3 + Math.cos(ang) * r * .8, .2 + k * 4.5 * fin + (2 - band) * .25, Math.sin(ang) * r], i * 3);
+  }
+  triGeo.attributes.position.needsUpdate = true;
+
+  cameraFor(p, fx);
+  sky.position.copy(camera.position);
+
+  // DOM
+  introEl.style.opacity = 1 - seg(p, .02, .08);
+  hintEl.style.opacity = 1 - seg(p, .01, .04);
+  outroEl.style.opacity = seg(p, .93, .98);
+  threadFill.style.height = `${p * 100}%`; threadWheel.style.top = `${p * 100}%`;
+  spokes.setAttribute('transform', `rotate(${p * 1440} 20 20)`);
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.fov = camera.aspect < .9 ? 52 : 42; camera.updateProjectionMatrix(); });
+dispatchEvent(new Event('resize'));
+document.getElementById('loader').classList.add('done');
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
